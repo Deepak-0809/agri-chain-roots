@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      orders: {
+        Row: {
+          buyer_id: string
+          id: string
+          notes: string | null
+          order_date: string
+          order_type: string
+          product_id: string | null
+          quantity: number
+          seller_id: string | null
+          status: string
+          supply_id: string | null
+          total_price: number
+        }
+        Insert: {
+          buyer_id: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_type: string
+          product_id?: string | null
+          quantity: number
+          seller_id?: string | null
+          status?: string
+          supply_id?: string | null
+          total_price: number
+        }
+        Update: {
+          buyer_id?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_type?: string
+          product_id?: string | null
+          quantity?: number
+          seller_id?: string | null
+          status?: string
+          supply_id?: string | null
+          total_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          farmer_id: string
+          harvest_date: string | null
+          id: string
+          name: string
+          price_per_unit: number
+          quantity_available: number
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          farmer_id: string
+          harvest_date?: string | null
+          id?: string
+          name: string
+          price_per_unit: number
+          quantity_available?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          farmer_id?: string
+          harvest_date?: string | null
+          id?: string
+          name?: string
+          price_per_unit?: number
+          quantity_available?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -50,6 +171,45 @@ export type Database = {
           role?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      supplies: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price: number
+          quantity_available: number
+          supplier_name: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price: number
+          quantity_available?: number
+          supplier_name: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          quantity_available?: number
+          supplier_name?: string
+          unit?: string
+          updated_at?: string
         }
         Relationships: []
       }

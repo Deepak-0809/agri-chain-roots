@@ -1,73 +1,178 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, ShoppingCart, TrendingUp, Wheat, Sprout } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
+
+interface Product {
+  id: string;
+  name: string;
+  quantity_available: number;
+  unit: string;
+  price_per_unit: number;
+  status: string;
+  harvest_date?: string;
+}
+
+interface Supply {
+  id: string;
+  name: string;
+  supplier_name: string;
+  price: number;
+  unit: string;
+  category: string;
+  quantity_available: number;
+}
 
 const FarmerDashboard = () => {
-  const [products] = useState([
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      quantity: "500 kg",
-      price: "$3.50/kg",
-      status: "Available",
-      harvestDate: "2024-09-10",
-    },
-    {
-      id: 2,
-      name: "Fresh Lettuce",
-      quantity: "200 kg",
-      price: "$2.80/kg",
-      status: "Sold",
-      harvestDate: "2024-09-08",
-    },
-    {
-      id: 3,
-      name: "Corn",
-      quantity: "1000 kg",
-      price: "$1.20/kg",
-      status: "In Transit",
-      harvestDate: "2024-09-05",
-    },
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [supplies, setSupplies] = useState<Supply[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    monthlySales: 0,
+    activeCrops: 0,
+    pendingOrders: 0
+  });
+  const navigate = useNavigate();
 
-  const [supplies] = useState([
-    {
-      id: 1,
-      name: "Tomato Seeds (Hybrid)",
-      supplier: "Green Seeds Co.",
-      price: "$45.00",
-      quantity: "1 kg",
-      category: "Seeds",
-    },
-    {
-      id: 2,
-      name: "Organic Fertilizer",
-      supplier: "EcoGrow Solutions",
-      price: "$28.50",
-      quantity: "25 kg",
-      category: "Fertilizer",
-    },
-    {
-      id: 3,
-      name: "Lettuce Seeds",
-      supplier: "Fresh Start Seeds",
-      price: "$32.00",
-      quantity: "500g",
-      category: "Seeds",
-    },
-  ]);
+  useEffect(() => {
+    // Check authentication
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/login');
+        return;
+      }
+      setUser(session.user);
+      await loadUserData(session.user.id);
+    };
+
+    checkAuth();
+
+    // Set up auth listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        navigate('/login');
+      } else {
+        setUser(session.user);
+        loadUserData(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const loadUserData = async (userId: string) => {
+    try {
+      // Load farmer's products
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('farmer_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (productsError) {
+        console.error('Error loading products:', productsError);
+        toast.error('Failed to load products');
+      } else {
+        setProducts(productsData || []);
+      }
+
+      // Load supplies
+      const { data: suppliesData, error: suppliesError } = await supabase
+        .from('supplies')
+        .select('*')
+        .order('name');
+
+      if (suppliesError) {
+        console.error('Error loading supplies:', suppliesError);
+        toast.error('Failed to load supplies');
+      } else {
+        setSupplies(suppliesData || []);
+      }
+
+      // Calculate stats
+      const totalProducts = productsData?.length || 0;
+      const activeCrops = productsData?.filter(p => p.status === 'available').length || 0;
+      
+      // Load orders for stats
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('total_price, status')
+        .eq('seller_id', userId);
+
+      const monthlySales = ordersData?.reduce((sum, order) => sum + (parseFloat(order.total_price.toString()) || 0), 0) || 0;
+      const pendingOrders = ordersData?.filter(o => o.status === 'pending').length || 0;
+
+      setStats({
+        totalProducts,
+        monthlySales,
+        activeCrops,
+        pendingOrders
+      });
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePurchaseSupply = async (supply: Supply) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: user.id,
+          supply_id: supply.id,
+          order_type: 'supply',
+          quantity: 1,
+          total_price: supply.price
+        });
+
+      if (error) {
+        console.error('Error creating order:', error);
+        toast.error('Failed to place order');
+      } else {
+        toast.success(`Order placed for ${supply.name}`);
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast.error('Failed to place order');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-secondary/10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Available":
+      case "available":
         return "bg-success";
-      case "Sold":
+      case "sold":
         return "bg-primary";
-      case "In Transit":
+      case "in_transit":
         return "bg-warning";
+      case "out_of_stock":
+        return "bg-destructive";
       default:
         return "bg-muted";
     }
@@ -91,7 +196,7 @@ const FarmerDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Products</p>
-                  <p className="text-2xl font-bold text-foreground">12</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalProducts}</p>
                 </div>
                 <Package className="h-8 w-8 text-primary" />
               </div>
@@ -103,7 +208,7 @@ const FarmerDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Monthly Sales</p>
-                  <p className="text-2xl font-bold text-foreground">$3,240</p>
+                  <p className="text-2xl font-bold text-foreground">${stats.monthlySales.toFixed(2)}</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-success" />
               </div>
@@ -115,7 +220,7 @@ const FarmerDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Active Crops</p>
-                  <p className="text-2xl font-bold text-foreground">8</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.activeCrops}</p>
                 </div>
                 <Wheat className="h-8 w-8 text-accent" />
               </div>
@@ -127,7 +232,7 @@ const FarmerDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Orders</p>
-                  <p className="text-2xl font-bold text-foreground">5</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.pendingOrders}</p>
                 </div>
                 <ShoppingCart className="h-8 w-8 text-warning" />
               </div>
@@ -166,30 +271,39 @@ const FarmerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
-                    >
-                      <div className="space-y-1">
-                        <h3 className="font-semibold text-foreground">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {product.quantity} • Harvested: {product.harvestDate}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-semibold text-foreground">{product.price}</p>
-                          <Badge className={getStatusColor(product.status)}>
-                            {product.status}
-                          </Badge>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                      </div>
+                  {products.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No products listed yet</p>
+                      <p className="text-sm text-muted-foreground">Click "Add Product" to get started</p>
                     </div>
-                  ))}
+                  ) : (
+                    products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center justify-between p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
+                      >
+                        <div className="space-y-1">
+                          <h3 className="font-semibold text-foreground">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Quantity: {product.quantity_available} {product.unit} • 
+                            {product.harvest_date && ` Harvested: ${product.harvest_date}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="font-semibold text-foreground">${product.price_per_unit.toFixed(2)}/{product.unit}</p>
+                            <Badge className={getStatusColor(product.status)}>
+                              {product.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -212,28 +326,41 @@ const FarmerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {supplies.map((supply) => (
-                    <div
-                      key={supply.id}
-                      className="p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
-                    >
-                      <div className="space-y-3">
-                        <div>
-                          <h3 className="font-semibold text-foreground">{supply.name}</h3>
-                          <p className="text-sm text-muted-foreground">{supply.supplier}</p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary">{supply.category}</Badge>
-                          <p className="font-semibold text-foreground">{supply.price}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Quantity: {supply.quantity}</p>
-                        <Button variant="success" className="w-full">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Purchase
-                        </Button>
-                      </div>
+                  {supplies.length === 0 ? (
+                    <div className="col-span-full text-center py-8">
+                      <Sprout className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No supplies available</p>
                     </div>
-                  ))}
+                  ) : (
+                    supplies.map((supply) => (
+                      <div
+                        key={supply.id}
+                        className="p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
+                      >
+                        <div className="space-y-3">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{supply.name}</h3>
+                            <p className="text-sm text-muted-foreground">{supply.supplier_name}</p>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary">{supply.category}</Badge>
+                            <p className="font-semibold text-foreground">${supply.price.toFixed(2)}</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Available: {supply.quantity_available} {supply.unit}
+                          </p>
+                          <Button 
+                            variant="default" 
+                            className="w-full"
+                            onClick={() => handlePurchaseSupply(supply)}
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Purchase
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
