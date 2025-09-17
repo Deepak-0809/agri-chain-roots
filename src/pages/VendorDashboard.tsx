@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import { Package } from "lucide-react";
+import SearchBar from "@/components/SearchBar";
 
 interface Product {
   id: string;
@@ -22,6 +23,7 @@ interface Product {
 
 const VendorDashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -77,12 +79,25 @@ const VendorDashboard = () => {
         toast.error('Failed to load products');
       } else {
         setProducts(productsData || []);
+        setFilteredProducts(productsData || []);
       }
     } catch (error) {
       console.error('Error loading products:', error);
       toast.error('Failed to load products');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    if (!query.trim()) {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(query.toLowerCase()) ||
+        (product.farmer_profile?.display_name || '').toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredProducts(filtered);
     }
   };
 
@@ -105,7 +120,6 @@ const VendorDashboard = () => {
         toast.error('Failed to place order');
       } else {
         toast.success(`Order placed for ${product.name}`);
-        // Reload products to update availability
         loadProducts();
       }
     } catch (error) {
@@ -132,17 +146,31 @@ const VendorDashboard = () => {
         <header className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Vendor Dashboard — FreshMart</h1>
           <p className="mt-2 text-muted-foreground">Browse available products from farmers. Place orders directly from producers.</p>
+          
+          <div className="mt-6">
+            <SearchBar 
+              onSearch={handleSearch}
+              placeholder="Search products or farmers..."
+              className="max-w-md"
+            />
+          </div>
         </header>
 
         <section className="grid gap-6 md:grid-cols-3">
-          {products.length === 0 ? (
+          {filteredProducts.length === 0 && products.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No products available</h3>
-              <p className="text-muted-foreground">Check back later for fresh products from farmers</p>
+              <p className="text-muted-foreground">No farmers have listed products yet. Check back later!</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
+              <p className="text-muted-foreground">Try adjusting your search terms</p>
             </div>
           ) : (
-            products.map((p) => (
+            filteredProducts.map((p) => (
               <Card key={p.id} className="flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-xl">{p.name}</CardTitle>

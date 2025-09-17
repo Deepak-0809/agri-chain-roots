@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, ShoppingCart, TrendingUp, Wheat, Sprout } from "lucide-react";
+import SearchBar from "@/components/SearchBar";
+import AddProductDialog from "@/components/AddProductDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -31,7 +33,9 @@ interface Supply {
 
 const FarmerDashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [supplies, setSupplies] = useState<Supply[]>([]);
+  const [filteredSupplies, setFilteredSupplies] = useState<Supply[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -83,6 +87,7 @@ const FarmerDashboard = () => {
         toast.error('Failed to load products');
       } else {
         setProducts(productsData || []);
+        setFilteredProducts(productsData || []);
       }
 
       // Load supplies
@@ -96,6 +101,7 @@ const FarmerDashboard = () => {
         toast.error('Failed to load supplies');
       } else {
         setSupplies(suppliesData || []);
+        setFilteredSupplies(suppliesData || []);
       }
 
       // Calculate stats
@@ -149,6 +155,31 @@ const FarmerDashboard = () => {
     } catch (error) {
       console.error('Error placing order:', error);
       toast.error('Failed to place order');
+    }
+  };
+
+  const handleSearchProducts = (query: string) => {
+    if (!query.trim()) {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(query.toLowerCase()) ||
+        product.status.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  };
+
+  const handleSearchSupplies = (query: string) => {
+    if (!query.trim()) {
+      setFilteredSupplies(supplies);
+    } else {
+      const filtered = supplies.filter(supply =>
+        supply.name.toLowerCase().includes(query.toLowerCase()) ||
+        supply.supplier_name.toLowerCase().includes(query.toLowerCase()) ||
+        supply.category.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredSupplies(filtered);
     }
   };
 
@@ -263,22 +294,36 @@ const FarmerDashboard = () => {
                       Manage your agricultural products and track their journey
                     </CardDescription>
                   </div>
-                  <Button variant="hero">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
+                  <AddProductDialog 
+                    onProductAdded={() => loadUserData(user?.id || '')} 
+                    userId={user?.id || ''} 
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <SearchBar 
+                    onSearch={handleSearchProducts}
+                    placeholder="Search your products..."
+                    className="max-w-md"
+                  />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {products.length === 0 ? (
+                  {filteredProducts.length === 0 && products.length === 0 ? (
                     <div className="text-center py-8">
                       <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">No products listed yet</p>
                       <p className="text-sm text-muted-foreground">Click "Add Product" to get started</p>
                     </div>
+                  ) : filteredProducts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No products match your search</p>
+                      <p className="text-sm text-muted-foreground">Try different search terms</p>
+                    </div>
                   ) : (
-                    products.map((product) => (
+                    filteredProducts.map((product) => (
                       <div
                         key={product.id}
                         className="flex items-center justify-between p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
@@ -323,16 +368,29 @@ const FarmerDashboard = () => {
                     View All Suppliers
                   </Button>
                 </div>
+                
+                <div className="mt-4">
+                  <SearchBar 
+                    onSearch={handleSearchSupplies}
+                    placeholder="Search supplies..."
+                    className="max-w-md"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {supplies.length === 0 ? (
+                  {filteredSupplies.length === 0 && supplies.length === 0 ? (
                     <div className="col-span-full text-center py-8">
                       <Sprout className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">No supplies available</p>
                     </div>
+                  ) : filteredSupplies.length === 0 ? (
+                    <div className="col-span-full text-center py-8">
+                      <Sprout className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No supplies match your search</p>
+                    </div>
                   ) : (
-                    supplies.map((supply) => (
+                    filteredSupplies.map((supply) => (
                       <div
                         key={supply.id}
                         className="p-4 bg-background rounded-lg border border-border hover:shadow-soft transition-all duration-200"
