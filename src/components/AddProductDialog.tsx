@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddProductDialogProps {
   onProductAdded: () => void;
@@ -15,6 +15,7 @@ interface AddProductDialogProps {
 }
 
 const AddProductDialog = ({ onProductAdded, userId }: AddProductDialogProps) => {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,9 +47,9 @@ const AddProductDialog = ({ onProductAdded, userId }: AddProductDialogProps) => 
 
       if (error) {
         console.error('Error adding product:', error);
-        toast.error('Failed to add product');
+        toast({ title: "Error", description: "Failed to add product", variant: "destructive" });
       } else {
-        toast.success('Product added successfully!');
+        toast({ title: "Success", description: "Product added successfully!" });
         setFormData({
           name: "",
           description: "",
@@ -62,7 +63,7 @@ const AddProductDialog = ({ onProductAdded, userId }: AddProductDialogProps) => 
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast({ title: "Error", description: "Failed to add product", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
