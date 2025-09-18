@@ -1,19 +1,20 @@
-import Navbar from "@/components/Navbar";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import type { User } from "@supabase/supabase-js";
-import { Package } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
 import ProductDetailsDialog from "@/components/ProductDetailsDialog";
+import PaymentDialog from "@/components/PaymentDialog";
+import { Package } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
 
 interface Product {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   farmer_profile?: {
     display_name: string;
   };
@@ -21,8 +22,9 @@ interface Product {
   quantity_available: number;
   unit: string;
   status: string;
-  harvest_date?: string;
+  harvest_date?: string | null;
   created_at?: string;
+  farmer_id: string;
 }
 
 const VendorDashboard = () => {
@@ -31,6 +33,7 @@ const VendorDashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     document.title = "Vendor Dashboard | AgriChain";
@@ -75,6 +78,7 @@ const VendorDashboard = () => {
           status,
           harvest_date,
           created_at,
+          farmer_id,
           farmer_profile:profiles!farmer_id(display_name)
         `)
         .eq('status', 'available')
@@ -83,14 +87,14 @@ const VendorDashboard = () => {
 
       if (error) {
         console.error('Error loading products:', error);
-        toast.error('Failed to load products');
+        toast({ title: "Error", description: "Failed to load products", variant: "destructive" });
       } else {
         setProducts(productsData || []);
         setFilteredProducts(productsData || []);
       }
     } catch (error) {
       console.error('Error loading products:', error);
-      toast.error('Failed to load products');
+      toast({ title: "Error", description: "Failed to load products", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -105,33 +109,6 @@ const VendorDashboard = () => {
         (product.farmer_profile?.display_name || '').toLowerCase().includes(query.toLowerCase())
       );
       setFilteredProducts(filtered);
-    }
-  };
-
-  const handlePurchase = async (product: Product) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .insert({
-          buyer_id: user.id,
-          product_id: product.id,
-          order_type: 'product',
-          quantity: 1,
-          total_price: product.price_per_unit
-        });
-
-      if (error) {
-        console.error('Error creating order:', error);
-        toast.error('Failed to place order');
-      } else {
-        toast.success(`Order placed for ${product.name}`);
-        loadProducts();
-      }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error('Failed to place order');
     }
   };
 
@@ -185,16 +162,22 @@ const VendorDashboard = () => {
                 <CardContent className="flex-1">
                   <div className="space-y-2 text-sm">
                     <p><span className="text-muted-foreground">Farmer:</span> {p.farmer_profile?.display_name || 'Unknown'}</p>
-                    <p><span className="text-muted-foreground">Price:</span> ${p.price_per_unit.toFixed(2)}/{p.unit}</p>
+                    <p><span className="text-muted-foreground">Price:</span> ₹{p.price_per_unit.toFixed(2)}/{p.unit}</p>
                     <p><span className="text-muted-foreground">Available:</span> {p.quantity_available} {p.unit}</p>
                     {p.description && (
                       <p className="text-xs text-muted-foreground mt-2">{p.description}</p>
                     )}
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button onClick={() => handlePurchase(p)} className="flex-1">
-                      Purchase
-                    </Button>
+                    <PaymentDialog
+                      product={p}
+                      trigger={
+                        <Button variant="hero" className="flex-1">
+                          Purchase
+                        </Button>
+                      }
+                      onPaymentComplete={loadProducts}
+                    />
                     <ProductDetailsDialog 
                       product={p}
                       trigger={

@@ -20,6 +20,8 @@ interface Product {
   price_per_unit: number;
   status: string;
   harvest_date?: string;
+  farmer_id: string;
+  description?: string | null;
 }
 
 interface Supply {
@@ -74,7 +76,8 @@ const FarmerDashboard = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId?: string) => {
+    if (!userId) return;
     try {
       // Load farmer's products
       const { data: productsData, error: productsError } = await supabase
@@ -350,6 +353,8 @@ const FarmerDashboard = () => {
                                 View Details
                               </Button>
                             }
+                            isOwner={true}
+                            onProductUpdated={() => loadUserData(user?.id)}
                           />
                         </div>
                       </div>

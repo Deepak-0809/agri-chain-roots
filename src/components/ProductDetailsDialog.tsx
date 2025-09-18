@@ -4,25 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Package, DollarSign, Wheat } from "lucide-react";
+import EditProductDialog from "./EditProductDialog";
 
 interface Product {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   quantity_available: number;
   unit: string;
   price_per_unit: number;
   status: string;
-  harvest_date?: string;
+  harvest_date?: string | null;
   created_at?: string;
+  farmer_id: string;
 }
 
 interface ProductDetailsDialogProps {
   product: Product;
   trigger: React.ReactNode;
+  isOwner?: boolean;
+  onProductUpdated?: () => void;
 }
 
-const ProductDetailsDialog = ({ product, trigger }: ProductDetailsDialogProps) => {
+const ProductDetailsDialog = ({ product, trigger, isOwner = false, onProductUpdated }: ProductDetailsDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -130,9 +134,17 @@ const ProductDetailsDialog = ({ product, trigger }: ProductDetailsDialogProps) =
             <Button variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
               Close
             </Button>
-            <Button variant="hero" className="flex-1">
-              Edit Product
-            </Button>
+            {isOwner && (
+              <EditProductDialog 
+                product={product}
+                onProductUpdated={onProductUpdated || (() => {})}
+                trigger={
+                  <Button variant="hero" className="flex-1">
+                    Edit Product
+                  </Button>
+                }
+              />
+            )}
           </div>
         </div>
       </DialogContent>
