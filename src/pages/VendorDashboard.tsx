@@ -8,10 +8,12 @@ import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import { Package } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
+import ProductDetailsDialog from "@/components/ProductDetailsDialog";
 
 interface Product {
   id: string;
   name: string;
+  description?: string;
   farmer_profile?: {
     display_name: string;
   };
@@ -19,6 +21,8 @@ interface Product {
   quantity_available: number;
   unit: string;
   status: string;
+  harvest_date?: string;
+  created_at?: string;
 }
 
 const VendorDashboard = () => {
@@ -64,10 +68,13 @@ const VendorDashboard = () => {
         .select(`
           id,
           name,
+          description,
           price_per_unit,
           quantity_available,
           unit,
           status,
+          harvest_date,
+          created_at,
           farmer_profile:profiles!farmer_id(display_name)
         `)
         .eq('status', 'available')
@@ -161,7 +168,7 @@ const VendorDashboard = () => {
             <div className="col-span-full text-center py-12">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No products available</h3>
-              <p className="text-muted-foreground">No farmers have listed products yet. Check back later!</p>
+              <p className="text-muted-foreground">No farmers have listed products yet. Products will appear here when farmers add them.</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="col-span-full text-center py-12">
@@ -176,14 +183,27 @@ const VendorDashboard = () => {
                   <CardTitle className="text-xl">{p.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-2 text-sm">
                     <p><span className="text-muted-foreground">Farmer:</span> {p.farmer_profile?.display_name || 'Unknown'}</p>
                     <p><span className="text-muted-foreground">Price:</span> ${p.price_per_unit.toFixed(2)}/{p.unit}</p>
                     <p><span className="text-muted-foreground">Available:</span> {p.quantity_available} {p.unit}</p>
+                    {p.description && (
+                      <p className="text-xs text-muted-foreground mt-2">{p.description}</p>
+                    )}
                   </div>
-                  <Button onClick={() => handlePurchase(p)} className="mt-4 w-full">
-                    Purchase
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button onClick={() => handlePurchase(p)} className="flex-1">
+                      Purchase
+                    </Button>
+                    <ProductDetailsDialog 
+                      product={p}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          Details
+                        </Button>
+                      }
+                    />
+                  </div>
                 </CardContent>
               </Card>
             ))

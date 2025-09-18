@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, ShoppingCart, TrendingUp, Wheat, Sprout } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import AddProductDialog from "@/components/AddProductDialog";
+import ProductDetailsDialog from "@/components/ProductDetailsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -342,9 +343,14 @@ const FarmerDashboard = () => {
                               {product.status.replace('_', ' ')}
                             </Badge>
                           </div>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
+                          <ProductDetailsDialog 
+                            product={product}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            }
+                          />
                         </div>
                       </div>
                     ))
