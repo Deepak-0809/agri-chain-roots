@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { QrCode, Smartphone, CreditCard, Copy, CheckCircle } from "lucide-react";
+import { QrCode, Smartphone, CreditCard, Copy, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,17 +31,43 @@ const PaymentDialog = ({ product, trigger, onPaymentComplete }: PaymentDialogPro
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'qr' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const [upiId, setUpiId] = useState("farmer@paytm"); // Demo UPI ID
+  const [upiId, setUpiId] = useState("agrichain@paytm");
+  const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState("");
 
   const totalAmount = (product.price_per_unit * quantity).toFixed(2);
   
-  // Generate UPI payment link
-  const upiLink = `upi://pay?pa=${upiId}&pn=FreshMart%20Farmer&am=${totalAmount}&cu=INR&tn=Payment%20for%20${encodeURIComponent(product.name)}`;
-  
-  // QR Code data (you would normally generate this with a library)
-  const qrData = upiLink;
+  // Generate QR code when payment method is selected
+  useEffect(() => {
+    if (paymentMethod === 'qr') {
+      generateQRCode();
+    }
+  }, [paymentMethod, totalAmount, product.name]);
+
+  const generateQRCode = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-qr', {
+        body: {
+          upiId: upiId,
+          amount: parseFloat(totalAmount),
+          productName: product.name,
+          merchantName: "AgriChain"
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        setQrCodeImage(data.qrCode);
+      }
+    } catch (error) {
+      console.error('QR generation error:', error);
+      toast({ title: "Error", description: "Failed to generate QR code", variant: "destructive" });
+    }
+  };
 
   const handleCopyUPI = () => {
+    const upiLink = `upi://pay?pa=${upiId}&pn=AgriChain&am=${totalAmount}&cu=INR&tn=Payment%20for%20${encodeURIComponent(product.name)}`;
     navigator.clipboard.writeText(upiLink);
     toast({ title: "Copied!", description: "UPI link copied to clipboard" });
   };
@@ -50,46 +76,31 @@ const PaymentDialog = ({ product, trigger, onPaymentComplete }: PaymentDialogPro
     setIsProcessing(true);
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         toast({ title: "Error", description: "Please log in to complete purchase", variant: "destructive" });
         return;
       }
 
-      // Create order in database
-      const { error } = await supabase
-        .from('orders')
-        .insert({
-          buyer_id: user.id,
-          seller_id: product.farmer_id,
-          product_id: product.id,
+      // Call payment processing API
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          productId: product.id,
           quantity: quantity,
-          total_price: parseFloat(totalAmount),
-          order_type: 'product',
-          status: 'completed',
-          notes: `Payment via ${paymentMethod?.toUpperCase()}`
-        });
+          paymentMethod: paymentMethod,
+          transactionId: transactionId || undefined
+        }
+      });
 
       if (error) {
-        console.error('Error creating order:', error);
-        toast({ title: "Error", description: "Failed to process order", variant: "destructive" });
-      } else {
+        console.error('Payment API error:', error);
+        throw new Error(error.message || 'Payment processing failed');
+      }
+
+      if (data.success) {
         setPaymentCompleted(true);
         toast({ title: "Success!", description: "Payment completed successfully!" });
         
-        // Update product quantity
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            quantity_available: product.quantity_available - quantity 
-          })
-          .eq('id', product.id);
-
-        if (updateError) {
-          console.error('Error updating product quantity:', updateError);
-        }
-
         setTimeout(() => {
           setIsOpen(false);
           onPaymentComplete();
@@ -97,11 +108,15 @@ const PaymentDialog = ({ product, trigger, onPaymentComplete }: PaymentDialogPro
           setPaymentCompleted(false);
           setPaymentMethod(null);
           setQuantity(1);
+          setTransactionId("");
+          setQrCodeImage(null);
         }, 2000);
+      } else {
+        throw new Error(data.error || 'Payment failed');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast({ title: "Error", description: "Payment failed", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Payment failed", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -208,10 +223,21 @@ const PaymentDialog = ({ product, trigger, onPaymentComplete }: PaymentDialogPro
                       </div>
                       <Button 
                         className="w-full" 
-                        onClick={() => window.open(upiLink, '_blank')}
+                        onClick={() => {
+                          const upiLink = `upi://pay?pa=${upiId}&pn=AgriChain&am=${totalAmount}&cu=INR&tn=Payment%20for%20${encodeURIComponent(product.name)}`;
+                          window.open(upiLink, '_blank');
+                        }}
                       >
                         Pay with UPI App
                       </Button>
+                      <div className="space-y-2">
+                        <Label>Transaction ID (Optional):</Label>
+                        <Input
+                          placeholder="Enter transaction ID after payment"
+                          value={transactionId}
+                          onChange={(e) => setTransactionId(e.target.value)}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -236,15 +262,31 @@ const PaymentDialog = ({ product, trigger, onPaymentComplete }: PaymentDialogPro
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                      <div className="w-40 h-40 bg-black/10 rounded flex items-center justify-center">
-                        <QrCode className="h-20 w-20 text-muted-foreground" />
-                      </div>
+                      {qrCodeImage ? (
+                        <img 
+                          src={qrCodeImage} 
+                          alt="QR Code for Payment" 
+                          className="w-40 h-40 rounded"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-black/10 rounded flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       Scan with any UPI app to pay ₹{totalAmount}
                     </p>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground mb-4">
                       UPI ID: {upiId}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Transaction ID (after payment):</Label>
+                      <Input
+                        placeholder="Enter transaction ID"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
