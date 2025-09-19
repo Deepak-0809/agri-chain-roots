@@ -276,6 +276,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_public_profile_data: {
+        Args: { target_user_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          role: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
