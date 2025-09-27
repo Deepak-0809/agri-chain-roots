@@ -42,6 +42,7 @@ serve(async (req) => {
         created_at,
         farmer_id,
         blockchain_id,
+        last_price_update,
         profiles!products_farmer_id_fkey(display_name, avatar_url, role)
       `)
       .eq('id', productId)
@@ -75,6 +76,7 @@ function generateProductHTML(product: any): string {
   const farmerName = product.profiles?.display_name || 'Unknown Farmer';
   const harvestDate = product.harvest_date ? new Date(product.harvest_date).toLocaleDateString() : 'Not specified';
   const createdDate = new Date(product.created_at).toLocaleDateString();
+  const lastUpdated = product.last_price_update ? new Date(product.last_price_update).toLocaleString() : 'Not available';
   const totalValue = (product.quantity_available * product.price_per_unit).toFixed(2);
   
   const statusColorMap: Record<string, string> = {
@@ -92,7 +94,12 @@ function generateProductHTML(product: any): string {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${product.name} - AgriChain Product Details</title>
-    <meta name="description" content="View detailed information about ${product.name} from ${farmerName}. Fresh, traceable agricultural products.">
+    <meta name="description" content="View real-time information about ${product.name} from ${farmerName}. Fresh, traceable agricultural products with live inventory updates.">
+    <meta name="keywords" content="agriculture, ${product.name}, farmer, ${farmerName}, organic, fresh produce">
+    <meta property="og:title" content="${product.name} - Fresh Agricultural Product">
+    <meta property="og:description" content="$${product.price_per_unit.toFixed(2)} per ${product.unit} • ${product.quantity_available} ${product.unit} available from ${farmerName}">
+    <meta property="og:type" content="product">
+    <meta name="twitter:card" content="summary_large_image">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -150,7 +157,7 @@ function generateProductHTML(product: any): string {
         }
         .details-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
             gap: 20px; 
             margin: 24px 0;
         }
@@ -171,7 +178,7 @@ function generateProductHTML(product: any): string {
             margin-bottom: 12px;
         }
         .detail-value { 
-            font-size: 1.5rem; 
+            font-size: 1.25rem; 
             font-weight: 700; 
             color: #059669;
             margin-bottom: 4px;
@@ -236,6 +243,16 @@ function generateProductHTML(product: any): string {
             color: #6b7280; 
             font-size: 0.875rem;
         }
+        .live-indicator {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(34, 197, 94, 0.2);
+        }
         @media (max-width: 640px) {
             .header h1 { font-size: 2rem; }
             .details-grid { grid-template-columns: 1fr; }
@@ -252,6 +269,10 @@ function generateProductHTML(product: any): string {
         </header>
         
         <main class="content">
+            <div class="live-indicator">
+                ⚡ LIVE DATA - Always up to date • Last refresh: ${new Date().toLocaleString()}
+            </div>
+
             ${product.description ? `
             <div class="description">
                 <h3 style="margin-bottom: 12px; color: #059669; font-size: 1.125rem;">Description</h3>
@@ -283,6 +304,12 @@ function generateProductHTML(product: any): string {
                     <div class="detail-value">${createdDate}</div>
                     <div class="detail-label">Listed Date</div>
                 </div>
+                
+                <div class="detail-card">
+                    <div class="detail-icon">🔄</div>
+                    <div class="detail-value">${lastUpdated}</div>
+                    <div class="detail-label">Last Updated</div>
+                </div>
             </div>
             
             <div class="total-value">
@@ -307,6 +334,9 @@ function generateProductHTML(product: any): string {
         <footer class="footer">
             <p>Powered by AgriChain - Transparent Agriculture Marketplace</p>
             <p style="margin-top: 8px;">Scan this QR code to view real-time product information</p>
+            <p style="margin-top: 4px; font-size: 0.75rem; color: #10b981;">
+                ⚡ Live Data • Updated in real-time • Page loaded: ${new Date().toLocaleString()}
+            </p>
         </footer>
     </div>
 </body>

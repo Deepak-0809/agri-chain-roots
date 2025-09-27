@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { QrCode, Download, Share2, Copy, Loader2 } from "lucide-react";
+import { QrCode, Download, Share2, Copy, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,15 +29,57 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
   const [qrCode, setQRCode] = useState<string | null>(null);
   const [productUrl, setProductUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState(product);
   const { toast } = useToast();
+
+  // Real-time sync: Update product data when it changes in the database
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const channel = supabase
+      .channel('product-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `id=eq.${product.id}`
+        },
+        (payload) => {
+          console.log('Product updated:', payload);
+          if (payload.new) {
+            setCurrentProduct(payload.new as Product);
+            // Regenerate QR code with updated data
+            if (qrCode) {
+              generateQRCode();
+            }
+            toast({
+              title: "Product Updated",
+              description: "Product information has been updated and QR code refreshed.",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, product.id, qrCode]);
+
+  // Sync current product with prop changes
+  useEffect(() => {
+    setCurrentProduct(product);
+  }, [product]);
 
   const generateQRCode = async () => {
     setIsGenerating(true);
     try {
-      console.log('Generating QR code for product:', product.id);
+      console.log('Generating QR code for product:', currentProduct.id);
       
       const { data, error } = await supabase.functions.invoke('generate-product-qr', {
-        body: { productId: product.id }
+        body: { productId: currentProduct.id }
       });
 
       if (error) {
@@ -121,6 +163,35 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
     }
   };
 
+  const handleRefreshQR = async () => {
+    // Fetch latest product data and regenerate QR code
+    try {
+      const { data: latestProduct, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', product.id)
+        .single();
+
+      if (error) throw error;
+      
+      if (latestProduct) {
+        setCurrentProduct(latestProduct);
+        await generateQRCode();
+        toast({
+          title: "QR Code Refreshed",
+          description: "QR code updated with latest product information.",
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing product data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh product data.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleOpenDialog = () => {
     setIsOpen(true);
     if (!qrCode) {
@@ -140,7 +211,11 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
             Product QR Code
           </DialogTitle>
           <DialogDescription>
-            Generate and share a QR code for {product.name}
+            Generate and share a QR code for {currentProduct.name}
+            <br />
+            <span className="text-xs text-muted-foreground">
+              QR code automatically updates when product information changes
+            </span>
           </DialogDescription>
         </DialogHeader>
         
@@ -148,10 +223,26 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
           {/* Product Info */}
           <Card className="bg-gradient-card">
             <CardContent className="pt-4">
-              <h3 className="font-semibold text-foreground mb-2">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                ${product.price_per_unit.toFixed(2)} per {product.unit} • {product.quantity_available} {product.unit} available
-              </p>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground mb-2">{currentProduct.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    ${currentProduct.price_per_unit.toFixed(2)} per {currentProduct.unit} • {currentProduct.quantity_available} {currentProduct.unit} available
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Status: <span className="capitalize">{currentProduct.status.replace('_', ' ')}</span>
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshQR}
+                  className="ml-2"
+                  disabled={isGenerating}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -172,7 +263,11 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
                   className="w-48 h-48 mx-auto mb-4 border-2 border-border rounded-lg"
                 />
                 <p className="text-xs text-muted-foreground mb-4">
-                  Scan this QR code to view detailed product information
+                  Scan this QR code to view real-time product information
+                  <br />
+                  <span className="text-xs font-medium text-primary">
+                    Always shows current data • Last updated: {new Date().toLocaleTimeString()}
+                  </span>
                 </p>
                 
                 {/* Action Buttons */}
