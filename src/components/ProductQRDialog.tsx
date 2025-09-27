@@ -76,11 +76,13 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
   const generateQRCode = async () => {
     setIsGenerating(true);
     try {
-      console.log('Generating QR code for product:', currentProduct.id);
+      console.log('🔍 Generating QR code for product:', currentProduct.id, currentProduct.name);
       
       const { data, error } = await supabase.functions.invoke('generate-product-qr', {
         body: { productId: currentProduct.id }
       });
+
+      console.log('📡 QR generation response:', { data, error });
 
       if (error) {
         console.error('QR generation error:', error);
@@ -88,6 +90,7 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
       }
 
       if (data.success) {
+        console.log('✅ QR code generated successfully:', data.qrCode ? 'QR code received' : 'No QR code');
         setQRCode(data.qrCode);
         setProductUrl(data.productUrl);
         toast({
@@ -95,10 +98,11 @@ const ProductQRDialog = ({ product, trigger }: ProductQRDialogProps) => {
           description: "Product QR code created successfully!",
         });
       } else {
+        console.error('❌ QR generation failed:', data.error);
         throw new Error(data.error || 'Failed to generate QR code');
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      console.error('💥 Error generating QR code:', error);
       toast({
         title: "Error",
         description: "Failed to generate QR code. Please try again.",
