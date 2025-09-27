@@ -1,6 +1,18 @@
 import { ethers } from 'ethers';
 import { supabase } from '@/integrations/supabase/client';
 
+// Global interface for MetaMask
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+      selectedAddress?: string;
+      on?: (event: string, callback: (accounts: string[]) => void) => void;
+    };
+  }
+}
+
 // Contract ABI (Application Binary Interface)
 const CONTRACT_ABI = [
   "function addProduct(string memory _name, string memory _description, uint256 _pricePerUnit, string memory _unit, uint256 _quantityAvailable) external returns (uint256)",
