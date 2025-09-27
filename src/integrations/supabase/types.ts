@@ -14,8 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      blockchain_transactions: {
+        Row: {
+          block_number: number | null
+          created_at: string
+          from_address: string
+          gas_price: number | null
+          gas_used: number | null
+          id: string
+          product_id: string | null
+          status: string
+          to_address: string | null
+          transaction_data: Json | null
+          transaction_hash: string
+          transaction_type: string
+          updated_at: string
+          value_eth: number | null
+        }
+        Insert: {
+          block_number?: number | null
+          created_at?: string
+          from_address: string
+          gas_price?: number | null
+          gas_used?: number | null
+          id?: string
+          product_id?: string | null
+          status?: string
+          to_address?: string | null
+          transaction_data?: Json | null
+          transaction_hash: string
+          transaction_type: string
+          updated_at?: string
+          value_eth?: number | null
+        }
+        Update: {
+          block_number?: number | null
+          created_at?: string
+          from_address?: string
+          gas_price?: number | null
+          gas_used?: number | null
+          id?: string
+          product_id?: string | null
+          status?: string
+          to_address?: string | null
+          transaction_data?: Json | null
+          transaction_hash?: string
+          transaction_type?: string
+          updated_at?: string
+          value_eth?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
+          blockchain_status: string | null
+          blockchain_transaction_hash: string | null
+          blockchain_transaction_id: string | null
           buyer_id: string
           id: string
           notes: string | null
@@ -29,6 +91,9 @@ export type Database = {
           total_price: number
         }
         Insert: {
+          blockchain_status?: string | null
+          blockchain_transaction_hash?: string | null
+          blockchain_transaction_id?: string | null
           buyer_id: string
           id?: string
           notes?: string | null
@@ -42,6 +107,9 @@ export type Database = {
           total_price: number
         }
         Update: {
+          blockchain_status?: string | null
+          blockchain_transaction_hash?: string | null
+          blockchain_transaction_id?: string | null
           buyer_id?: string
           id?: string
           notes?: string | null
@@ -101,11 +169,14 @@ export type Database = {
       }
       products: {
         Row: {
+          blockchain_id: string | null
+          blockchain_transaction_hash: string | null
           created_at: string
           description: string | null
           farmer_id: string
           harvest_date: string | null
           id: string
+          last_price_update: string | null
           name: string
           price_per_unit: number
           quantity_available: number
@@ -114,11 +185,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          blockchain_id?: string | null
+          blockchain_transaction_hash?: string | null
           created_at?: string
           description?: string | null
           farmer_id: string
           harvest_date?: string | null
           id?: string
+          last_price_update?: string | null
           name: string
           price_per_unit: number
           quantity_available?: number
@@ -127,11 +201,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          blockchain_id?: string | null
+          blockchain_transaction_hash?: string | null
           created_at?: string
           description?: string | null
           farmer_id?: string
           harvest_date?: string | null
           id?: string
+          last_price_update?: string | null
           name?: string
           price_per_unit?: number
           quantity_available?: number
@@ -160,6 +237,7 @@ export type Database = {
         Row: {
           address: string | null
           avatar_url: string | null
+          blockchain_wallet: string | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -172,6 +250,7 @@ export type Database = {
         Insert: {
           address?: string | null
           avatar_url?: string | null
+          blockchain_wallet?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -184,6 +263,7 @@ export type Database = {
         Update: {
           address?: string | null
           avatar_url?: string | null
+          blockchain_wallet?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null

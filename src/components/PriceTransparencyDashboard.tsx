@@ -41,7 +41,7 @@ export const PriceTransparencyDashboard: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price_per_unit')
+        .select('id, name, price_per_unit, blockchain_id')
         .eq('status', 'available');
 
       if (error) throw error;
@@ -50,7 +50,7 @@ export const PriceTransparencyDashboard: React.FC = () => {
         id: product.id,
         name: product.name,
         currentPrice: Number(product.price_per_unit),
-        blockchainId: null // Will be available after migration
+        blockchainId: product.blockchain_id
       }));
 
       setProducts(productsData);
