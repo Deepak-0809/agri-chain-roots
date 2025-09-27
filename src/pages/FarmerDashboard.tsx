@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Package, ShoppingCart, TrendingUp, Wheat, Sprout } from "lucide-react";
+import { Plus, Package, ShoppingCart, TrendingUp, Wheat, Sprout, QrCode } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import AddProductDialog from "@/components/AddProductDialog";
 import ProductDetailsDialog from "@/components/ProductDetailsDialog";
+import ProductQRDialog from "@/components/ProductQRDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -339,23 +340,33 @@ const FarmerDashboard = () => {
                             {product.harvest_date && ` Harvested: ${product.harvest_date}`}
                           </p>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
+                        <div className="flex items-center gap-2">
+                          <div className="text-right flex-1">
                             <p className="font-semibold text-foreground">${product.price_per_unit.toFixed(2)}/{product.unit}</p>
                             <Badge className={getStatusColor(product.status)}>
                               {product.status.replace('_', ' ')}
                             </Badge>
                           </div>
-                          <ProductDetailsDialog 
-                            product={product}
-                            trigger={
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            }
-                            isOwner={true}
-                            onProductUpdated={() => loadUserData(user?.id)}
-                          />
+                          <div className="flex gap-2">
+                            <ProductQRDialog 
+                              product={product}
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  <QrCode className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <ProductDetailsDialog 
+                              product={product}
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  View Details
+                                </Button>
+                              }
+                              isOwner={true}
+                              onProductUpdated={() => loadUserData(user?.id)}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))

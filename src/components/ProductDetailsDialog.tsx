@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarDays, Package, DollarSign, Wheat } from "lucide-react";
+import { CalendarDays, Package, DollarSign, Wheat, QrCode } from "lucide-react";
 import EditProductDialog from "./EditProductDialog";
+import ProductQRDialog from "./ProductQRDialog";
 
 interface Product {
   id: string;
@@ -134,6 +135,18 @@ const ProductDetailsDialog = ({ product, trigger, isOwner = false, onProductUpda
             <Button variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
               Close
             </Button>
+            
+            {/* QR Code Button - Always visible */}
+            <ProductQRDialog 
+              product={product}
+              trigger={
+                <Button variant="outline" className="flex-1">
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Code
+                </Button>
+              }
+            />
+            
             {isOwner && (
               <EditProductDialog 
                 product={product}
