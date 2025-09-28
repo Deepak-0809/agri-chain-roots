@@ -64,8 +64,11 @@ const LoginForm = () => {
         case 'farmer':
           navigate('/farmer-dashboard');
           break;
-        case 'vendor':
-          navigate('/vendor-dashboard');
+        case 'distributor':
+          navigate('/distributor-dashboard');
+          break;
+        case 'consumer':
+          navigate('/consumer-dashboard');
           break;
         default:
           navigate('/farmer-dashboard');
@@ -182,8 +185,8 @@ const LoginForm = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="farmer">Farmer</SelectItem>
-                    <SelectItem value="vendor">Vendor/Distributor</SelectItem>
-                    <SelectItem value="retailer">Retailer</SelectItem>
+                    <SelectItem value="distributor">Distributor</SelectItem>
+                    <SelectItem value="consumer">Consumer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -61,8 +61,11 @@ const RoleSelect = () => {
         case 'farmer':
           navigate('/farmer-dashboard');
           break;
-        case 'vendor':
-          navigate('/vendor-dashboard');
+        case 'distributor':
+          navigate('/distributor-dashboard');
+          break;
+        case 'consumer':
+          navigate('/consumer-dashboard');
           break;
         default:
           navigate('/farmer-dashboard');
@@ -83,19 +86,19 @@ const RoleSelect = () => {
       color: "bg-green-50 border-green-200 text-green-800"
     },
     {
-      id: "vendor",
-      title: "Vendor/Distributor", 
-      description: "Source products from farmers and distribute to retailers and consumers.",
+      id: "distributor",
+      title: "Distributor", 
+      description: "Source products from farmers and distribute to consumers in bulk.",
       icon: Store,
       features: ["Supplier Network", "Bulk Purchasing", "Logistics Management", "Quality Control"],
       color: "bg-blue-50 border-blue-200 text-blue-800"
     },
     {
-      id: "retailer",
-      title: "Retailer",
-      description: "Purchase products from vendors and sell to end consumers.",
+      id: "consumer",
+      title: "Consumer",
+      description: "Purchase fresh products from distributors with full supply chain transparency.",
       icon: ShoppingCart,
-      features: ["Product Sourcing", "Inventory Management", "Customer Sales", "Market Analytics"],
+      features: ["Product Sourcing", "Supply Chain Tracking", "QR Code Scanning", "Transparency"],
       color: "bg-purple-50 border-purple-200 text-purple-800"
     }
   ];
@@ -189,8 +192,11 @@ const RoleSelect = () => {
               case 'farmer':
                 navigate('/farmer-dashboard');
                 break;
-              case 'vendor':
-                navigate('/vendor-dashboard');
+              case 'distributor':
+                navigate('/distributor-dashboard');
+                break;
+              case 'consumer':
+                navigate('/consumer-dashboard');
                 break;
               default:
                 navigate('/farmer-dashboard');

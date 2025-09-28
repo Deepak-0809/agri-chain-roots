@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import FarmerDashboard from "./pages/FarmerDashboard";
-import VendorDashboard from "./pages/VendorDashboard";
+import DistributorDashboard from "./pages/DistributorDashboard";
+import ConsumerDashboard from "./pages/ConsumerDashboard";
 import RoleSelect from "./pages/RoleSelect";
 import NotFound from "./pages/NotFound";
 
@@ -23,7 +24,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<RoleSelect />} />
           <Route path="/farmer-dashboard" element={<FarmerDashboard />} />
-          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/distributor-dashboard" element={<DistributorDashboard />} />
+          <Route path="/consumer-dashboard" element={<ConsumerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
