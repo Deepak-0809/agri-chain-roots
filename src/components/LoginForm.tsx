@@ -59,7 +59,17 @@ const LoginForm = () => {
         .eq('user_id', userId)
         .single();
       
-      const role = profile?.role || 'farmer';
+      const role = profile?.role;
+      if (!role) {
+        toast.error("No role found for this account. Please complete registration.");
+        navigate('/register');
+        return;
+      }
+
+      if (userType && userType !== role) {
+        toast.error(`This account is registered as ${role}. Redirecting to your ${role} dashboard.`);
+      }
+
       switch (role) {
         case 'farmer':
           navigate('/farmer-dashboard');
@@ -71,11 +81,11 @@ const LoginForm = () => {
           navigate('/consumer-dashboard');
           break;
         default:
-          navigate('/farmer-dashboard');
+          navigate('/login');
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
-      navigate('/farmer-dashboard');
+      navigate('/login');
     }
   };
 
@@ -96,18 +106,6 @@ const LoginForm = () => {
       }
 
       if (data.user) {
-        // ALWAYS update user role if userType is selected during login
-        if (userType) {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ role: userType })
-            .eq('user_id', data.user.id);
-          
-          if (updateError) {
-            console.error('Error updating role:', updateError);
-          }
-        }
-        
         toast.success("Login successful! Redirecting...");
         // Navigation will be handled by the auth state change listener
       }
