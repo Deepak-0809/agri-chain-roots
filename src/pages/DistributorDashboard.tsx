@@ -11,25 +11,26 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 
-interface Product {
+interface DistributorInventoryItem {
   id: string;
-  name: string;
+  product_name: string;
   description?: string | null;
-  farmer_profile?: {
-    display_name: string;
-  };
+  farmer_id: string;
+  farmer_name: string;
   price_per_unit: number;
   quantity_available: number;
   unit: string;
   status: string;
-  harvest_date?: string | null;
+  received_date?: string | null;
+  expiry_date?: string | null;
   created_at?: string;
-  farmer_id: string;
+  original_product_id: string;
+  distributor_id: string;
 }
 
 const DistributorDashboard = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [inventory, setInventory] = useState<DistributorInventoryItem[]>([]);
+  const [filteredInventory, setFilteredInventory] = useState<DistributorInventoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ const DistributorDashboard = () => {
       }
       
       setUser(session.user);
-      await loadProducts();
+      await loadInventory();
     };
 
     checkAuth();
@@ -86,37 +87,26 @@ const DistributorDashboard = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadProducts = async () => {
+  const loadInventory = async () => {
     try {
-      const { data: productsData, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          description,
-          price_per_unit,
-          quantity_available,
-          unit,
-          status,
-          harvest_date,
-          created_at,
-          farmer_id,
-          farmer_profile:profiles!farmer_id(display_name)
-        `)
-        .eq('status', 'available')
-        .gt('quantity_available', 0)
+      if (!user) return;
+      
+      const { data: inventoryData, error } = await supabase
+        .from('distributor_inventory')
+        .select('*')
+        .eq('distributor_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading products:', error);
-        toast({ title: "Error", description: "Failed to load products", variant: "destructive" });
+        console.error('Error loading inventory:', error);
+        toast({ title: "Error", description: "Failed to load inventory", variant: "destructive" });
       } else {
-        setProducts(productsData || []);
-        setFilteredProducts(productsData || []);
+        setInventory(inventoryData || []);
+        setFilteredInventory(inventoryData || []);
       }
     } catch (error) {
-      console.error('Error loading products:', error);
-      toast({ title: "Error", description: "Failed to load products", variant: "destructive" });
+      console.error('Error loading inventory:', error);
+      toast({ title: "Error", description: "Failed to load inventory", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -124,13 +114,14 @@ const DistributorDashboard = () => {
 
   const handleSearch = (query: string) => {
     if (!query.trim()) {
-      setFilteredProducts(products);
+      setFilteredInventory(inventory);
     } else {
-      const filtered = products.filter(product =>
-        product.name.toLowerCase().includes(query.toLowerCase()) ||
-        (product.farmer_profile?.display_name || '').toLowerCase().includes(query.toLowerCase())
+      const filtered = inventory.filter(item =>
+        item.product_name.toLowerCase().includes(query.toLowerCase()) ||
+        item.farmer_name.toLowerCase().includes(query.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(query.toLowerCase())
       );
-      setFilteredProducts(filtered);
+      setFilteredInventory(filtered);
     }
   };
 
@@ -151,63 +142,57 @@ const DistributorDashboard = () => {
       <main className="container mx-auto px-4 py-10">
         <header className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Distributor Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Browse available products from farmers and purchase for distribution.</p>
+          <p className="mt-2 text-muted-foreground">Manage your inventory and track product distribution.</p>
           
           <div className="mt-6">
             <SearchBar 
               onSearch={handleSearch}
-              placeholder="Search products or farmers..."
+              placeholder="Search your inventory..."
               className="max-w-md"
             />
           </div>
         </header>
 
         <section className="grid gap-6 md:grid-cols-3">
-          {filteredProducts.length === 0 && products.length === 0 ? (
+          {filteredInventory.length === 0 && inventory.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No products available</h3>
-              <p className="text-muted-foreground">No farmers have listed products yet. Products will appear here when farmers add them.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No inventory items</h3>
+              <p className="text-muted-foreground">Your distributor inventory is empty. Purchase products from farmers to start distributing.</p>
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : filteredInventory.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No items found</h3>
               <p className="text-muted-foreground">Try adjusting your search terms</p>
             </div>
           ) : (
-            filteredProducts.map((p) => (
-              <Card key={p.id} className="flex flex-col">
+            filteredInventory.map((item) => (
+              <Card key={item.id} className="flex flex-col">
                 <CardHeader>
-                  <CardTitle className="text-xl">{p.name}</CardTitle>
+                  <CardTitle className="text-xl">{item.product_name}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
                   <div className="space-y-2 text-sm">
-                    <p><span className="text-muted-foreground">Farmer:</span> {p.farmer_profile?.display_name || 'Unknown'}</p>
-                    <p><span className="text-muted-foreground">Price:</span> ₹{p.price_per_unit.toFixed(2)}/{p.unit}</p>
-                    <p><span className="text-muted-foreground">Available:</span> {p.quantity_available} {p.unit}</p>
-                    {p.description && (
-                      <p className="text-xs text-muted-foreground mt-2">{p.description}</p>
+                    <p><span className="text-muted-foreground">Farmer:</span> {item.farmer_name}</p>
+                    <p><span className="text-muted-foreground">Price:</span> ₹{item.price_per_unit.toFixed(2)}/{item.unit}</p>
+                    <p><span className="text-muted-foreground">Available:</span> {item.quantity_available} {item.unit}</p>
+                    <p><span className="text-muted-foreground">Status:</span> <span className={`inline-block px-2 py-1 rounded-full text-xs ${item.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{item.status}</span></p>
+                    <p><span className="text-muted-foreground">Received:</span> {item.received_date ? new Date(item.received_date).toLocaleDateString() : 'N/A'}</p>
+                    {item.expiry_date && (
+                      <p><span className="text-muted-foreground">Expires:</span> {new Date(item.expiry_date).toLocaleDateString()}</p>
+                    )}
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground mt-2">{item.description}</p>
                     )}
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <PaymentDialog
-                      product={p}
-                      trigger={
-                        <Button variant="hero" className="flex-1">
-                          Purchase
-                        </Button>
-                      }
-                      onPaymentComplete={loadProducts}
-                    />
-                    <ProductDetailsDialog 
-                      product={p}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Details
-                        </Button>
-                      }
-                    />
+                    <Button variant="outline" className="flex-1">
+                      Manage Stock
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Details
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

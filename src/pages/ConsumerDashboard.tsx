@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
-import ProductDetailsDialog from "@/components/ProductDetailsDialog";
+import SupplyChainDialog from "@/components/SupplyChainDialog";
 import PaymentDialog from "@/components/PaymentDialog";
 import { Package, QrCode, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -172,7 +172,7 @@ const ConsumerDashboard = () => {
       <Navbar />
       <main className="container mx-auto px-4 py-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Consumer Dashboard — FreshMart</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Consumer Dashboard</h1>
           <p className="mt-2 text-muted-foreground">Browse available products from distributors. Track the complete supply chain journey.</p>
           
           <div className="mt-6">
@@ -233,14 +233,16 @@ const ConsumerDashboard = () => {
                       }
                       onPaymentComplete={loadDistributorProducts}
                     />
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewSupplyChain(p.original_product_id)}
-                    >
-                      <Truck className="h-4 w-4 mr-1" />
-                      Track
-                    </Button>
+                    <SupplyChainDialog
+                      productId={p.original_product_id}
+                      productName={p.product_name}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          <Truck className="h-4 w-4 mr-1" />
+                          Track
+                        </Button>
+                      }
+                    />
                     <Button 
                       variant="outline" 
                       size="sm"
