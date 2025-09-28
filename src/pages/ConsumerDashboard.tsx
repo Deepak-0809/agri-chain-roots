@@ -199,11 +199,9 @@ const ConsumerDashboard = () => {
                       product={{
                         id: p.original_product_id,
                         name: p.product_name,
-                        description: p.description,
                         price_per_unit: p.price_per_unit,
                         quantity_available: p.quantity_available,
                         unit: p.unit,
-                        status: p.status,
                         farmer_id: p.farmer_id
                       }}
                       trigger={

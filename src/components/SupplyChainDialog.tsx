@@ -49,26 +49,57 @@ const SupplyChainDialog = ({ productId, productName, trigger }: SupplyChainDialo
   const loadSupplyChain = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get supply chain records
+      const { data: supplyChainData, error: supplyChainError } = await supabase
         .from('supply_chain_tracking')
-        .select(`
-          *,
-          from_profile:profiles!from_user_id(display_name, role),
-          to_profile:profiles!to_user_id(display_name, role)
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('transaction_date', { ascending: true });
 
-      if (error) {
-        console.error('Error loading supply chain:', error);
+      if (supplyChainError) {
+        console.error('Error loading supply chain:', supplyChainError);
         toast({
           title: "Error",
           description: "Failed to load supply chain data",
           variant: "destructive",
         });
-      } else {
-        setSupplyChain(data || []);
+        return;
       }
+
+      if (!supplyChainData || supplyChainData.length === 0) {
+        setSupplyChain([]);
+        return;
+      }
+
+      // Get unique user IDs for profile lookup
+      const userIds = [...new Set([
+        ...supplyChainData.map(record => record.from_user_id),
+        ...supplyChainData.map(record => record.to_user_id)
+      ])];
+
+      // Get profiles for all users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, role')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+      }
+
+      // Create a map for quick profile lookup
+      const profileMap = new Map(
+        (profiles || []).map(profile => [profile.user_id, profile])
+      );
+
+      // Combine supply chain data with profiles
+      const enrichedData = supplyChainData.map(record => ({
+        ...record,
+        from_profile: profileMap.get(record.from_user_id) || { display_name: 'Unknown', role: 'unknown' },
+        to_profile: profileMap.get(record.to_user_id) || { display_name: 'Unknown', role: 'unknown' }
+      }));
+
+      setSupplyChain(enrichedData);
     } catch (error) {
       console.error('Error loading supply chain:', error);
       toast({
