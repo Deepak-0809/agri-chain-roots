@@ -39,13 +39,36 @@ const ConsumerDashboard = () => {
   useEffect(() => {
     document.title = "Consumer Dashboard | AgriChain";
     
-    // Check authentication
+    // Check authentication and role
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
         return;
       }
+      
+      // Check if user has consumer role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (profile?.role !== 'consumer') {
+        // Redirect to correct dashboard based on role
+        switch (profile?.role) {
+          case 'farmer':
+            navigate('/farmer-dashboard');
+            break;
+          case 'distributor':
+            navigate('/distributor-dashboard');
+            break;
+          default:
+            navigate('/login');
+        }
+        return;
+      }
+      
       setUser(session.user);
       await loadDistributorProducts();
     };
@@ -57,8 +80,7 @@ const ConsumerDashboard = () => {
       if (!session) {
         navigate('/login');
       } else {
-        setUser(session.user);
-        loadDistributorProducts();
+        checkAuth();
       }
     });
 

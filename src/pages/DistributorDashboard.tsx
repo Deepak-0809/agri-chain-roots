@@ -27,7 +27,7 @@ interface Product {
   farmer_id: string;
 }
 
-const VendorDashboard = () => {
+const DistributorDashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -36,15 +36,38 @@ const VendorDashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    document.title = "Vendor Dashboard | AgriChain";
+    document.title = "Distributor Dashboard | AgriChain";
     
-    // Check authentication
+    // Check authentication and role
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
         return;
       }
+      
+      // Check if user has distributor role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (profile?.role !== 'distributor') {
+        // Redirect to correct dashboard based on role
+        switch (profile?.role) {
+          case 'farmer':
+            navigate('/farmer-dashboard');
+            break;
+          case 'consumer':
+            navigate('/consumer-dashboard');
+            break;
+          default:
+            navigate('/login');
+        }
+        return;
+      }
+      
       setUser(session.user);
       await loadProducts();
     };
@@ -56,8 +79,7 @@ const VendorDashboard = () => {
       if (!session) {
         navigate('/login');
       } else {
-        setUser(session.user);
-        loadProducts();
+        checkAuth();
       }
     });
 
@@ -128,8 +150,8 @@ const VendorDashboard = () => {
       <Navbar />
       <main className="container mx-auto px-4 py-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Vendor Dashboard — FreshMart</h1>
-          <p className="mt-2 text-muted-foreground">Browse available products from farmers. Place orders directly from producers.</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Distributor Dashboard</h1>
+          <p className="mt-2 text-muted-foreground">Browse available products from farmers and purchase for distribution.</p>
           
           <div className="mt-6">
             <SearchBar 
@@ -197,4 +219,4 @@ const VendorDashboard = () => {
   );
 };
 
-export default VendorDashboard;
+export default DistributorDashboard;

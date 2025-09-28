@@ -51,13 +51,36 @@ const FarmerDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check authentication
+    // Check authentication and role
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
         return;
       }
+      
+      // Check if user has farmer role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (profile?.role !== 'farmer') {
+        // Redirect to correct dashboard based on role
+        switch (profile?.role) {
+          case 'distributor':
+            navigate('/distributor-dashboard');
+            break;
+          case 'consumer':
+            navigate('/consumer-dashboard');
+            break;
+          default:
+            navigate('/login');
+        }
+        return;
+      }
+      
       setUser(session.user);
       await loadUserData(session.user.id);
     };
@@ -69,8 +92,7 @@ const FarmerDashboard = () => {
       if (!session) {
         navigate('/login');
       } else {
-        setUser(session.user);
-        loadUserData(session.user.id);
+        checkAuth();
       }
     });
 

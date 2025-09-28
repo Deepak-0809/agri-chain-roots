@@ -96,12 +96,16 @@ const LoginForm = () => {
       }
 
       if (data.user) {
-        // Update user role in profile if userType is selected
+        // ALWAYS update user role if userType is selected during login
         if (userType) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('profiles')
             .update({ role: userType })
             .eq('user_id', data.user.id);
+          
+          if (updateError) {
+            console.error('Error updating role:', updateError);
+          }
         }
         
         toast.success("Login successful! Redirecting...");
