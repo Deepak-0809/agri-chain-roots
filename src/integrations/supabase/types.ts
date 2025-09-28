@@ -73,6 +73,68 @@ export type Database = {
           },
         ]
       }
+      distributor_inventory: {
+        Row: {
+          created_at: string
+          description: string | null
+          distributor_id: string
+          expiry_date: string | null
+          farmer_id: string
+          farmer_name: string
+          id: string
+          original_product_id: string
+          price_per_unit: number
+          product_name: string
+          quantity_available: number
+          received_date: string
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          distributor_id: string
+          expiry_date?: string | null
+          farmer_id: string
+          farmer_name: string
+          id?: string
+          original_product_id: string
+          price_per_unit: number
+          product_name: string
+          quantity_available?: number
+          received_date?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          distributor_id?: string
+          expiry_date?: string | null
+          farmer_id?: string
+          farmer_name?: string
+          id?: string
+          original_product_id?: string
+          price_per_unit?: number
+          product_name?: string
+          quantity_available?: number
+          received_date?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distributor_inventory_original_product_id_fkey"
+            columns: ["original_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           blockchain_status: string | null
@@ -313,6 +375,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      supply_chain_tracking: {
+        Row: {
+          blockchain_hash: string | null
+          created_at: string
+          from_user_id: string
+          id: string
+          notes: string | null
+          price_per_unit: number
+          product_id: string
+          quantity: number
+          status: string
+          to_user_id: string
+          transaction_date: string
+          transaction_type: string
+        }
+        Insert: {
+          blockchain_hash?: string | null
+          created_at?: string
+          from_user_id: string
+          id?: string
+          notes?: string | null
+          price_per_unit: number
+          product_id: string
+          quantity: number
+          status?: string
+          to_user_id: string
+          transaction_date?: string
+          transaction_type: string
+        }
+        Update: {
+          blockchain_hash?: string | null
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          notes?: string | null
+          price_per_unit?: number
+          product_id?: string
+          quantity?: number
+          status?: string
+          to_user_id?: string
+          transaction_date?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_chain_tracking_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
